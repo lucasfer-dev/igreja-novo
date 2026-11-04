@@ -12,11 +12,16 @@ import { DatabaseSync } from 'node:sqlite';
 import { randomBytes, scryptSync, timingSafeEqual, createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 const root=path.dirname(fileURLToPath(import.meta.url));
-fs.mkdirSync(path.join(root,'data'),{recursive:true});
-const db=new DatabaseSync(process.env.DB_FILE || path.join(root,'data','elovia.sqlite'));
+const isVercel=Boolean(process.env.VERCEL);
+// TEMPORARY DEMO-ONLY DATABASE. Serverless file storage is ephemeral;
+// never store real member or visitor data here.
+if(!isVercel)fs.mkdirSync(path.join(root,'data'),{recursive:true});
+const dbFile=process.env.DB_FILE || (isVercel ? path.join(os.tmpdir(),`elovia-demo-${process.pid}.sqlite`) : path.join(root,'data','elovia.sqlite'));
+const db=new DatabaseSync(dbFile);
 db.exec('PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;');
 db.exec(`CREATE TABLE IF NOT EXISTS modules(id TEXT PRIMARY KEY,name TEXT NOT NULL,category TEXT NOT NULL,description TEXT NOT NULL,price_cents INTEGER NOT NULL CHECK(price_cents>=0),active INTEGER NOT NULL DEFAULT 1);
 CREATE TABLE IF NOT EXISTS orders(id TEXT PRIMARY KEY,tracking_hash TEXT NOT NULL,church TEXT NOT NULL,contact TEXT NOT NULL,email TEXT NOT NULL,phone TEXT NOT NULL,city TEXT NOT NULL,state TEXT NOT NULL,template TEXT NOT NULL,color TEXT NOT NULL,notes TEXT NOT NULL,base_cents INTEGER NOT NULL,setup_cents INTEGER NOT NULL,total_cents INTEGER NOT NULL,status TEXT NOT NULL DEFAULT 'recebido',created_at TEXT NOT NULL,updated_at TEXT NOT NULL);
@@ -251,5 +256,7 @@ export async function handler(req,res){try{
  }
  throw err(404,'Rota não encontrada');
  }catch(e){console.error(e.code>=500?e:e.message);return json(res,e.code||500,{error:e.code?e.message:'Erro interno do servidor'});}}
-if(process.env.NODE_ENV!=='test'){const server=http.createServer(handler);server.listen(Number(process.env.PORT||3000),'127.0.0.1',()=>console.log('Elovia: http://127.0.0.1:'+server.address().port));}
+// Vercel invokes the exported handler, while local development binds a port.
+if(process.env.NODE_ENV!=='test' && !isVercel){const server=http.createServer(handler);server.listen(Number(process.env.PORT||3000),'127.0.0.1',()=>console.log('Elovia: http://127.0.0.1:'+server.address().port));}
+export default handler;
 export {quote,db,transitions};
