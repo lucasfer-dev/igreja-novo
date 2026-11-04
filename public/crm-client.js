@@ -7,18 +7,18 @@ const live=document.body.dataset.crmLive==='1';
 const opts={kind:[['visitante','Visitante'],['membro','Membro']],stage:[['novo','Novo'],['contatado','Contatado'],['acompanhamento','Em acompanhamento'],['integrado','Integrado'],['inativo','Inativo']],channel:[['whatsapp','WhatsApp'],['telefone','Telefone'],['presencial','Presencial'],['email','E-mail'],['outro','Outro']],status:[['todo','Pendente'],['done','Concluída']],attendance:[['presente','Presente'],['ausente','Ausente']]};
 const resources=['people','activities','tasks','events','groups','attendance'];
 const names={people:'contato',activities:'acompanhamento',tasks:'tarefa',events:'evento',groups:'grupo',attendance:'presença'};
-const headings={overview:['Visão geral','Acompanhe sua comunidade em um só lugar, com registros reais e organizados.'],people:['Pessoas e visitantes','Cadastre, segmente e acompanhe membros e novos visitantes.'],activities:['Acompanhamentos','Registre contatos, visitas e ações pastorais em cada jornada.'],tasks:['Tarefas e retornos','Organize pendências da equipe e não perca o próximo contato.'],events:['Agenda de eventos','Planeje encontros, cultos e atividades da comunidade.'],groups:['Grupos e ministérios','Organize grupos, ministérios e responsáveis.'],attendance:['Controle de presença','Registre quem participou dos eventos cadastrados.']};
+const headings={overview:['Visão geral da igreja','Sua comunidade, agenda, equipes e presença digital no mesmo ambiente.'],site:['Meu site institucional','Edite o site da sua igreja aqui mesmo. As alterações aparecem no espaço público.'],people:['Pessoas e visitantes','Cadastre, segmente e acompanhe membros e novos visitantes.'],activities:['Acompanhamentos','Registre contatos, visitas e ações pastorais em cada jornada.'],tasks:['Tarefas e retornos','Organize pendências da equipe e não perca o próximo contato.'],events:['Agenda de eventos','Planeje encontros, cultos e atividades da comunidade.'],groups:['Grupos e ministérios','Organize grupos, ministérios e responsáveis.'],attendance:['Controle de presença','Registre quem participou dos eventos cadastrados.']};
 let initialNew=new URLSearchParams(location.search).get('new');
-const state={view:new URLSearchParams(location.search).get('view')||'overview',data:Object.fromEntries(resources.map(r=>[r,[]])),search:'',edit:null,filterKind:'todos',csrf:''};
+const state={view:new URLSearchParams(location.search).get('view')||'overview',data:Object.fromEntries(resources.map(r=>[r,[]])),search:'',edit:null,filterKind:'todos',csrf:'',site:null,modules:[]};
 if(!headings[state.view])state.view='overview';
 function notice(msg,error=false){const n=$('#crm-feedback');n.textContent=msg;n.style.color=error?'#ee9e9e':'var(--accent)';}
 async function api(path='',method='GET',payload){const res=await fetch(apiBase+path,{method,credentials:'same-origin',headers:{...(payload?{'Content-Type':'application/json'}:{}),...(state.csrf?{'X-CSRF-Token':state.csrf}:{})},body:payload?JSON.stringify(payload):undefined});let data;try{data=await res.json();}catch{throw new Error('Resposta inesperada do servidor');}if(!res.ok)throw new Error(data.error||'Não foi possível concluir a operação');return data;}
 async function load(){
   try{
-   if(live){const a=await fetch('/api/church/me',{credentials:'same-origin'});if(!a.ok){location.href='/igreja/entrar';return;}const me=await a.json();state.csrf=me.csrf;}
+   if(live){const a=await fetch('/api/church/me',{credentials:'same-origin'});if(!a.ok){location.href='/igreja/entrar';return;}const me=await a.json();state.csrf=me.csrf;state.modules=me.modules||[];}
    const collections=await Promise.all(resources.map(r=>api('/'+r)));
    resources.forEach((r,i)=>{state.data[r]=collections[i].items;});
-   updateStats();render();
+   updateStats();render();if(state.view==='site')await loadSite();
    if(initialNew){const kind=initialNew;initialNew=null;const query=new URLSearchParams(location.search);query.delete('new');history.replaceState({},'',location.pathname+(query.size?'?'+query:''));if(kind==='membro'||kind==='visitante'){openForm('people','',{kind,stage:'novo'});}else if(definitions[kind])openForm(kind);}
   }catch(e){notice(e.message,true);$('#crm-workspace').innerHTML=`<div class="crm-empty"><strong>Não foi possível carregar o CRM</strong><p>${escapeHTML(e.message)}</p><button class="crm-outline" data-action="retry">Tentar novamente</button></div>`;}
 }
@@ -64,12 +64,53 @@ function attendance(){const items=state.data.attendance.filter(x=>!state.search|
  if(!items.length)return empty('Nenhuma presença registrada','Cadastre um evento e uma pessoa para registrar participações.','attendance');
  return `<div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Pessoa</th><th>Evento</th><th>Situação</th><th>Data de registro</th><th>Ações</th></tr></thead><tbody>${items.map(x=>`<tr><td>${escapeHTML(personName(x.person_id))}</td><td>${escapeHTML(eventName(x.event_id))}</td><td><span class="crm-badge ${x.status==='presente'?'member':'visitor'}">${escapeHTML(x.status)}</span></td><td>${niceDate(x.created_at)}</td><td>${editDelete('attendance',x.id)}</td></tr>`).join('')}</tbody></table></div>`;
 }
-function render(){if(!headings[state.view])state.view='overview';$('#crm-heading').textContent=headings[state.view][0];$('#crm-subtitle').textContent=headings[state.view][1];$$('[data-nav]').forEach(el=>{if(el.classList.contains('crm-primary'))return;if(el.dataset.nav===state.view)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current');});
- const current={overview,people,activities,tasks,events:()=>cards('events',['title','location','description']),groups:()=>cards('groups',['name','leader','description']),attendance}[state.view];
- $('#crm-workspace').innerHTML=current();$('#crm-create').textContent={overview:'+ Novo contato',people:'+ Nova pessoa',activities:'+ Registrar contato',tasks:'+ Nova tarefa',events:'+ Novo evento',groups:'+ Novo grupo',attendance:'+ Registrar presença'}[state.view];
- $('#crm-export').hidden=state.view==='attendance';
+
+function sitePanel(){
+ const c=state.site,publicUrl=document.body.dataset.crmSiteUrl||'';
+ if(!c)return '<div class="crm-empty"><strong>Preparando o editor do site...</strong><p>Carregando as informações públicas da igreja.</p></div>';
+ return '<div class="crm-site-intro"><div><span class="crm-eyebrow">SITE PÚBLICO + CRM</span><h2>Seu site é parte do sistema.</h2><p>Edite a apresentação institucional enquanto as pessoas, os eventos e os acompanhamentos permanecem organizados aqui no painel.</p></div><a href="'+escapeHTML(publicUrl)+'" target="_blank" rel="noopener" class="crm-outline">Abrir site público ↗</a></div>'+
+ '<div class="crm-site-layout"><section class="crm-panel crm-site-editor"><h2>Identidade e apresentação</h2><p>As alterações só são publicadas quando você clicar em salvar.</p><form id="crm-site-form" class="crm-site-form">'+
+ '<label>Nome da igreja<input type="text" value="'+escapeHTML(c.name||'')+'" disabled aria-describedby="crm-name-help"></label><small id="crm-name-help">Nome cadastrado na plataforma.</small>'+
+ '<label>Título principal<input type="text" name="headline" required maxlength="120" value="'+escapeHTML(c.headline||'')+'"></label>'+
+ '<label>Mensagem de apresentação<textarea name="description" rows="6" maxlength="1000" required>'+escapeHTML(c.description||'')+'</textarea></label>'+
+ '<label>Localização<input type="text" name="location" maxlength="90" value="'+escapeHTML(c.location||'')+'"></label>'+
+ '<label>Cor de destaque<input type="color" name="color" value="'+escapeHTML(c.color||'#dca64f')+'"></label>'+
+ '<div class="crm-site-form-actions"><button type="submit" class="crm-primary">Salvar e publicar alterações</button><span id="crm-site-status" role="status" aria-live="polite"></span></div>'+
+ '</form></section><section class="crm-panel crm-site-preview"><div class="crm-preview-head"><div><span class="crm-eyebrow">VISUALIZAÇÃO DO SITE</span><h2>Assim sua comunidade vê</h2></div><button type="button" class="crm-outline" data-action="preview-reload">Atualizar prévia ↻</button></div>'+
+ '<div class="crm-browser-frame"><div class="crm-browser-bar"><span>● ● ●</span> '+escapeHTML(c.name||'Sua igreja')+'</div><iframe id="crm-site-iframe" title="Prévia da página pública da igreja" src="'+escapeHTML(publicUrl)+'" loading="lazy" sandbox="allow-forms allow-same-origin"></iframe></div>'+
+ '<p class="crm-site-help">Eventos e visitantes se conectam ao mesmo CRM. Use somente dados fictícios na demonstração.</p></section></div>';
 }
-function setView(v){if(!headings[v])return;state.view=v;state.search='';$('#crm-filter').value='';history.replaceState({},'',location.pathname+'?view='+encodeURIComponent(v));render();$('#crm-sidebar').classList.remove('is-open');window.scrollTo({top:0,behavior:'smooth'});}
+async function loadSite(){
+ try{
+  const liveSite=live?'/api/church/site':'/api/demo-sites/'+encodeURIComponent(document.body.dataset.crmDemo||'');
+  const response=await fetch(liveSite,{credentials:'same-origin'});
+  const data=await response.json();
+  if(!response.ok)throw Error(data.error||'Não foi possível abrir a configuração do site');
+  state.site=live?data:data.site;
+  if(state.view==='site')render();
+ }catch(error){notice(error.message,true);$('#crm-workspace').innerHTML='<div class="crm-empty"><strong>Não foi possível carregar o site</strong><p>'+escapeHTML(error.message)+'</p></div>';}
+}
+async function saveSite(form){
+ const submit=form.querySelector('[type=submit]'),feedback=$('#crm-site-status');
+ const payload=Object.fromEntries(new FormData(form).entries());
+ const siteURL=live?'/api/church/site':'/api/demo-sites/'+encodeURIComponent(document.body.dataset.crmDemo||'');
+ submit.disabled=true;feedback.textContent='Salvando...';
+ try{
+  const result=await fetch(siteURL,{method:'PATCH',credentials:'same-origin',headers:{'Content-Type':'application/json',...(state.csrf?{'X-CSRF-Token':state.csrf}:{})},body:JSON.stringify(payload)});
+  const data=await result.json();
+  if(!result.ok)throw Error(data.error||'Não foi possível salvar o site');
+  await loadSite();
+  $('#crm-site-status').textContent='Publicado com sucesso.';
+  const iframe=$('#crm-site-iframe');if(iframe)iframe.src=(document.body.dataset.crmSiteUrl||'')+'?updated='+Date.now();
+ }catch(error){feedback.textContent=error.message;}finally{submit.disabled=false;}
+}
+
+function render(){if(!headings[state.view])state.view='overview';$('#crm-heading').textContent=headings[state.view][0];$('#crm-subtitle').textContent=headings[state.view][1];$$('[data-nav]').forEach(el=>{if(el.classList.contains('crm-primary'))return;if(el.dataset.nav===state.view)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current');});
+ const current={overview,people,activities,tasks,events:()=>cards('events',['title','location','description']),groups:()=>cards('groups',['name','leader','description']),attendance,site:sitePanel}[state.view];
+ $('#crm-workspace').innerHTML=current();$('#crm-create').textContent={overview:'+ Novo contato',people:'+ Nova pessoa',activities:'+ Registrar contato',tasks:'+ Nova tarefa',events:'+ Novo evento',groups:'+ Novo grupo',attendance:'+ Registrar presença',site:'Editar meu site'}[state.view];
+ $('#crm-create').hidden=state.view==='site';$('#crm-filter').closest('.crm-toolbar-search').hidden=state.view==='site';$('#crm-export').hidden=state.view==='site'||state.view==='attendance';if($('#crm-seed'))$('#crm-seed').hidden=state.view==='site';
+}
+function setView(v){if(!headings[v])return;state.view=v;state.search='';$('#crm-filter').value='';history.replaceState({},'',location.pathname+'?view='+encodeURIComponent(v));render();if(v==='site')loadSite();$('#crm-sidebar').classList.remove('is-open');window.scrollTo({top:0,behavior:'smooth'});}
 const definitions={
  people:[['name','Nome completo','text',true],['kind','Tipo','select',true,opts.kind],['stage','Etapa do acompanhamento','select',true,opts.stage],['email','E-mail','email'],['phone','Telefone / WhatsApp','tel'],['ministry','Ministério / grupo','text'],['notes','Observações internas','textarea']],
  activities:[['person_id','Pessoa','people',true],['channel','Canal','select',true,opts.channel],['summary','Resumo do contato','textarea',true],['occurred_at','Data','datetime-local']],
@@ -104,13 +145,14 @@ document.addEventListener('click',e=>{const nav=e.target.closest('[data-nav]');i
  if(act==='close-detail'){$('#crm-person-detail')?.remove();}
  if(act==='convert')updateOne('people',id,{kind:'membro',stage:'integrado'});
  if(act==='done'||act==='undo')updateOne('tasks',id,{status:act==='done'?'done':'todo'});
- if(act==='retry')load();
+ if(act==='retry')load();if(act==='preview-reload'){const frame=$('#crm-site-iframe');if(frame)frame.src=(document.body.dataset.crmSiteUrl||'')+'?refresh='+Date.now();}
 });
 $('#crm-create').addEventListener('click',()=>openForm(state.view==='overview'?'people':state.view));
 $('#crm-filter').addEventListener('input',e=>{state.search=e.target.value.trim();render();});
 $('#crm-export').addEventListener('click',()=>{location.href=apiBase+'/export/people';});
 $('#crm-seed')?.addEventListener('click',seed);
 $('#crm-form').addEventListener('submit',save);
+document.addEventListener('submit',event=>{if(event.target.id==='crm-site-form'){event.preventDefault();saveSite(event.target);}});
 $('#crm-close').addEventListener('click',()=>$('#crm-dialog').close());
 $('#crm-cancel').addEventListener('click',()=>$('#crm-dialog').close());
 $('#crm-menu-open').addEventListener('click',()=>$('#crm-sidebar').classList.add('is-open'));
