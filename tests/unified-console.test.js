@@ -1,0 +1,53 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {spawn} from 'node:child_process';
+import {mkdtempSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+
+test('painel da igreja integra CRM, editor do site, oração e escalas',async t=>{
+ const temp=mkdtempSync(join(tmpdir(),'elovia-unified-'));
+ const port=52000+Math.floor(Math.random()*1000);
+ const root='http://127.0.0.1:'+port;
+ const server=spawn(process.execPath,['--experimental-sqlite','server.js'],{cwd:process.cwd(),env:{...process.env,PORT:String(port),DB_FILE:join(temp,'test.sqlite')},stdio:'ignore'});
+ t.after(()=>{server.kill();rmSync(temp,{recursive:true,force:true});});
+ let started=false;
+ for(let i=0;i<90;i++){try{if((await fetch(root+'/')).ok){started=true;break;}}catch{}await new Promise(resolve=>setTimeout(resolve,40));}
+ assert.equal(started,true,'servidor deve inicializar');
+ const call=async(path,method='GET',data)=>{
+  const res=await fetch(root+path,{method,headers:{...(data?{'Content-Type':'application/json'}:{})},body:data?JSON.stringify(data):undefined});
+  return {status:res.status,value:await res.json()};
+ };
+ const setup={name:'Comunidade Modelo',template:'moderno',headline:'Uma comunidade de acolhimento',description:'Espaço para crescer juntos',location:'Rio de Janeiro',color:'#a87b45',logo_data:'',modules:['site','eventos','membros','oracao','escalas']};
+ const created=await call('/api/demo-sites','POST',setup);
+ assert.equal(created.status,201);
+ const id=created.value.id;
+ const hub=await fetch(root+'/demo/'+id+'/hub').then(r=>r.text());
+ assert.match(hub,/Membros e visitantes/);
+ assert.match(hub,/Meu site institucional/);
+ assert.match(hub,/Escalas ministeriais/);
+ assert.match(hub,/crm-stat-contacts/);
+ assert.doesNotMatch(hub,/2\.845|18\.540|Todos os módulos acessíveis/);
+ const siteURL='/demo/'+id;
+ const site=await fetch(root+siteURL).then(r=>r.text());
+ assert.match(site,/id="public-visitor"/);
+ assert.match(site,/id="public-prayer"/);
+ assert.doesNotMatch(site,/Referência: R\$|Todos os módulos acessíveis/);
+ const updated=await call('/api/demo-sites/'+id,'PATCH',{headline:'Novo título publicado',description:'Nova descrição no site',location:'Nova localidade',color:'#335577'});
+ assert.equal(updated.status,200);
+ const publicSite=await fetch(root+siteURL).then(r=>r.text());
+ assert.match(publicSite,/Novo título publicado/);
+ assert.match(publicSite,/Nova descrição no site/);
+ const prayer=await call('/api/demo/'+id+'/prayer-intake','POST',{requester:'Pessoa de teste',message:'Pedido de oração para testar o sistema'});
+ assert.equal(prayer.status,201);
+ const prayers=await call('/api/demo/'+id+'/prayers');
+ assert.equal(prayers.status,200);
+ assert.equal(prayers.value.items.length,1);
+ assert.equal(prayers.value.items[0].status,'pendente');
+ const schedule=await call('/api/demo/'+id+'/schedules','POST',{ministry:'Recepção',person:'Voluntário de teste',starts_at:'2026-11-08T10:00',notes:'Chegar 30 minutos antes'});
+ assert.equal(schedule.status,201);
+ const schedules=await call('/api/demo/'+id+'/schedules');
+ assert.equal(schedules.value.items[0].ministry,'Recepção');
+ const noAccess=await call('/api/demo/'+('0'.repeat(40))+'/schedules');
+ assert.equal(noAccess.status,404);
+});

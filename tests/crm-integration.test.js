@@ -25,7 +25,7 @@ test('CRM demonstração: pessoas, atividades, tarefas, grupos, eventos e presen
  const idA=a.data.id,idB=b.data.id,apiA=`/api/demo/${idA}/crm`,apiB=`/api/demo/${idB}/crm`;
  for(const model of [a,b]){
   const page=await fetch(base+`/demo/${model.data.id}/crm`);assert.equal(page.status,200);
-  const html=await page.text();assert.match(html,/CRM · Relacionamento e cuidado/);
+  const html=await page.text();assert.match(html,/Plataforma da igreja · Gestão e site/);
   assert.match(html,/crm.css/);assert.match(html,/crm-client.js/);
  }
  const seeded=await api(apiA+'/seed','POST',{});assert.equal(seeded.status,201);
@@ -78,7 +78,7 @@ test('CRM da igreja: login, CSRF, controle de módulos, temas e isolamento entre
  for(const item of [a,b,c])assert.equal(item.status,200);
  assert.equal((await fetch(base+'/igreja/crm')).status,401);
  assert.equal((await fetch(base+'/igreja/crm',{headers:{Cookie:a.cookie}})).status,200);
- const bPage=await fetch(base+'/igreja/crm',{headers:{Cookie:b.cookie}}).then(r=>r.text());assert.match(bPage,/crm-style-tradicional/);
+ const bPage=await fetch(base+'/igreja/crm',{headers:{Cookie:b.cookie}}).then(r=>r.text());assert.match(bPage,/crm-style-moderno crm-unified/);
  assert.equal((await fetch(base+'/igreja/crm',{headers:{Cookie:c.cookie}})).status,403);
  const path='/api/church/crm';
  assert.equal((await api(path+'/people','POST',payloadPeople,a.cookie)).status,403,'CSRF obrigatório');
