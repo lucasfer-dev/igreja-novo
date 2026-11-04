@@ -25,8 +25,8 @@ test('cria e abre site de demonstração em todos os cinco modelos sem enviar pe
   assert.match(html,new RegExp(`cs-theme-${template}`));
   assert.match(html,new RegExp(`Testando ${template} agora`));
   assert.match(html,/Comunidade Nova Esperança/);
-  assert.match(html,/DEMONSTRAÇÃO COMPLETA/);
-  assert.match(html,/Editar esta igreja/);
+  assert.match(html,/SITE DE DEMONSTRAÇÃO/);
+  assert.match(html,/Editar site no CRM/);
   assert.match(html,/Sou novo aqui/);
   assert.match(html,/data-endpoint=\"\/api\/demo\//);
   assert.doesNotMatch(html,/Tudo que sua igreja pode utilizar|Referência: R\$/);
