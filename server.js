@@ -138,7 +138,7 @@ export async function handler(req,res){try{
   const b=await body(req);
   if(!validText(b.name,1,100)||!validText(b.headline||'',0,120)||!validText(b.description||'',0,1000)||!validText(b.location||'',0,90)||!templates.includes(b.template)||!/^#[0-9a-fA-F]{6}$/.test(b.color)||!validLogo(b.logo_data||'')||!Array.isArray(b.modules)||b.modules.some(x=>!DELIVERABLE_MODULES.includes(x)))throw err(400,'Confira as informações do site');
   const id=randomBytes(20).toString('hex');
-  const site=normalizeSite({...b,modules:['site','eventos','oracao']});
+  const site=normalizeSite({...b,modules:['site','eventos','oracao','membros']});
   db.prepare('INSERT INTO demo_sites(id,payload,created_at) VALUES(?,?,?)').run(id,JSON.stringify(site),now());
   return json(res,201,{id,url:'/demo/'+id});
  }
@@ -184,7 +184,7 @@ export async function handler(req,res){try{
   if(!record)throw err(404,'Demonstração não encontrada');
   const site=JSON.parse(record.payload);
   const events=db.prepare("SELECT title,starts_at,location,description FROM crm_events WHERE owner_type='demo' AND owner_id=? ORDER BY starts_at ASC LIMIT 12").all(demoPage[1]);
-  return html(res,200,renderChurchSite({...site,modules:featureCatalog.map(f=>f.id),events},{preview:true,demo:true,demoId:demoPage[1]}));
+  return html(res,200,renderChurchSite({...site,modules:['site','eventos','oracao','membros'],events},{preview:true,demo:true,demoId:demoPage[1]}));
  }
  const demoFeature=/^\/demo\/([0-9a-f]{40})\/recurso\/([a-z0-9-]+)$/.exec(p);
  if(m==='GET'&&demoFeature){
@@ -202,6 +202,18 @@ export async function handler(req,res){try{
   if(!record)throw err(404,'Demonstração não encontrada');
   return json(res,200,{site:JSON.parse(record.payload)});
  }
+ if(m==='PATCH'&&demoApi){
+  const origin=req.headers.origin;
+  if(origin){let host;try{host=new URL(origin).host;}catch{throw err(403,'Origem inválida');}if(host!==req.headers.host)throw err(403,'Origem não autorizada');}
+  const record=db.prepare('SELECT payload FROM demo_sites WHERE id=?').get(demoApi[1]);
+  if(!record)throw err(404,'Demonstração não encontrada');
+  const b=await body(req);
+  if(!validText(b.headline,1,120)||!validText(b.description,1,1000)||!validText(b.location||'',0,90)||!/^#[0-9a-fA-F]{6}$/.test(b.color))throw err(400,'Confira os campos do site');
+  const site=normalizeSite({...JSON.parse(record.payload),headline:b.headline.trim(),description:b.description.trim(),location:(b.location||'').trim(),color:b.color});
+  db.prepare('UPDATE demo_sites SET payload=? WHERE id=?').run(JSON.stringify(site),demoApi[1]);
+  return json(res,200,{ok:true,site});
+ }
+
  if(m==='POST'&&p==='/api/site-preview'){
   const b=await body(req);
   if(!validText(b.name||'Sua igreja',1,100)||!validText(b.headline||'',0,120)||!validText(b.description||'',0,1000)||!validText(b.location||'',0,90)||!templates.includes(b.template)||!/^#[0-9a-fA-F]{6}$/.test(b.color)||!validLogo(b.logo_data||'')||!Array.isArray(b.modules)||b.modules.some(x=>!DELIVERABLE_MODULES.includes(x)))throw err(400,'Configuração inválida para a prévia');
