@@ -14,3 +14,88 @@
 @media(max-width:900px){.crm-shell{display:block}.crm-sidebar{position:fixed;inset:0 auto 0 0;width:min(300px,86vw);transform:translateX(-110%);transition:transform .2s;box-shadow:none}.crm-sidebar.is-open{transform:translateX(0);box-shadow:0 0 0 100vw #0009}.crm-mobile-close{display:grid;place-items:center;border:1px solid #6a788a;background:transparent;color:#fff;border-radius:8px;width:30px;height:30px}.crm-menu-toggle{display:grid;place-items:center;background:transparent;color:var(--text);border:1px solid var(--stroke);border-radius:9px;width:40px;height:40px}.crm-topbar{padding:0 16px}.crm-grid{grid-template-columns:1fr}}
 @media(max-width:650px){.crm-main{padding:23px 13px 36px}.crm-topbar-mode,.crm-topbar-avatar,.crm-topbar-title small{display:none}.crm-topbar{height:62px}.crm-topbar-title strong{font-size:12px}.crm-page-heading{align-items:start;flex-direction:column;margin-bottom:18px}.crm-page-heading h1{font-size:30px}.crm-page-heading .crm-primary{width:100%}.crm-stats{gap:10px;margin-bottom:22px}.crm-stats article{min-height:85px;padding:12px;gap:10px}.crm-stats article>span{width:34px;height:34px}.crm-stats article>span svg{width:20px;height:20px}.crm-stats strong{font-size:23px}.crm-stats small{font-size:10px}.crm-toolbar{align-items:stretch;flex-direction:column;gap:10px}.crm-toolbar-search{max-width:none}.crm-toolbar-actions button{flex:1;justify-content:center}.crm-panel{padding:15px}.crm-card-grid,.crm-board{grid-template-columns:1fr}.crm-dialog form{padding:17px}.crm-fields{grid-template-columns:1fr}.crm-fields label.full{grid-column:auto}.crm-dialog-actions{position:sticky;bottom:0;background:var(--surface);padding:12px 0}.crm-row-actions{flex-wrap:wrap}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+
+
+/* Elovia v2 — console de operações: navegação naval, workspace editorial claro.
+   Mantém todas as seções, formulários, dados e ações existentes. */
+.crm-style-moderno .crm-main-column{
+  --bg:#f6f7f9;--side:#ffffff;--surface:#ffffff;--panel:#f8fafb;
+  --hover:#eff4f6;--stroke:#e3e9ee;--text:#23364a;--muted:#718293;
+  --soft:#91a0ab;--accent:#ad7e42;--accent-fg:#172c3c;
+  --shadow:0 7px 26px rgba(17,40,57,.045);
+  background:var(--bg);color:var(--text);min-height:100vh
+}
+.crm-style-moderno .crm-sidebar{background:linear-gradient(180deg,#11283d,#0b1b2b 68%,#091827);border-right:1px solid #284153}
+.crm-style-moderno .crm-identity{min-height:89px;border-bottom-color:#2c4355}
+.crm-style-moderno .crm-identity strong{font-size:16px;color:#fff;letter-spacing:-.035em}
+.crm-style-moderno .crm-identity small{font-size:10px;color:#94acbc}
+.crm-style-moderno .crm-side-scroll{padding:20px 11px}
+.crm-style-moderno .crm-side-label{font-size:9px;letter-spacing:.15em;color:#c1a274;margin:15px 13px 10px}
+.crm-style-moderno .crm-side-item{border-radius:9px;font-size:12px;color:#c6d6e2}
+.crm-style-moderno .crm-side-item.crm-side-active{background:linear-gradient(100deg,#664b2e,#3b342e);border:1px solid #866647;color:#fff}
+.crm-style-moderno .crm-tabs{gap:3px}
+.crm-style-moderno .crm-tabs button{color:#b2c4d3;font-size:11.5px;border-radius:8px;margin:0;min-height:43px}
+.crm-style-moderno .crm-tabs button:hover,.crm-style-moderno .crm-tabs button[aria-current=page]{background:#1b3448;color:#fff;border-left:none}
+.crm-style-moderno .crm-tabs button[aria-current=page]{box-shadow:inset 3px 0 #dfab65}
+.crm-style-moderno .crm-categories button,.crm-style-moderno .crm-categories summary{color:#c4d2dc;font-size:11px}
+.crm-style-moderno .crm-categories button:hover,.crm-style-moderno .crm-categories summary:hover{background:#21394c;color:#fff}
+.crm-style-moderno .crm-side-footer{border-top:1px solid #2b4257}
+.crm-style-moderno .crm-side-footer a{color:#a8becd}
+.crm-style-moderno .crm-live-indicator{color:#e4bd80}
+.crm-style-moderno .crm-topbar{height:79px;box-shadow:0 1px 0 #ebeff2;padding:0 34px}
+.crm-style-moderno .crm-topbar-title small{color:#a1adb9;letter-spacing:.15em}
+.crm-style-moderno .crm-topbar-title strong{color:#2c4154;font-size:13px}
+.crm-style-moderno .crm-topbar-mode{background:#f7f7f4;border:1px solid #e7e2d8;color:#a17944;font-weight:750}
+.crm-style-moderno .crm-view-site{background:#fffaf3;color:#9b733b;border-color:#e3c99d}
+.crm-style-moderno .crm-view-site:hover{background:#fae8cb}
+.crm-style-moderno .crm-topbar-avatar{background:linear-gradient(135deg,#f5d7a5,#d69b51);box-shadow:0 0 0 3px #f5eee1}
+.crm-style-moderno .crm-main{max-width:1460px;padding:40px 37px 65px}
+.crm-style-moderno .crm-page-heading{margin-bottom:26px}
+.crm-style-moderno .crm-eyebrow{font-size:9px;color:#ad804a}
+.crm-style-moderno .crm-page-heading h1{font-size:clamp(30px,3vw,39px);color:#21374a;font-weight:850;letter-spacing:-.052em}
+.crm-style-moderno .crm-page-heading p{color:#8293a2;font-size:12px}
+.crm-style-moderno .crm-primary{border:1px solid #e5b36c;color:#1d2d3f;background:linear-gradient(130deg,#f2d39e,#e6b066);box-shadow:0 6px 17px #c79d6234;border-radius:9px}
+.crm-style-moderno .crm-primary:hover{box-shadow:0 10px 25px #c79d6255}
+.crm-style-moderno .crm-alert{background:#fffaf0;border:1px solid #ecdabe;color:#9b713c;padding:11px 15px;font-size:11px;margin-bottom:25px}
+.crm-style-moderno .crm-stats{gap:15px;margin-bottom:25px}
+.crm-style-moderno .crm-stats article{min-height:122px;border:1px solid #e6eaf0;box-shadow:0 4px 18px #1a34430a;border-radius:13px;background:#fff;padding:23px;display:flex;flex-direction:row-reverse;justify-content:space-between;align-items:center;gap:10px}
+.crm-style-moderno .crm-stats article>span{background:#fbf4e7;color:#ae8249;width:45px;height:45px;border-radius:12px}
+.crm-style-moderno .crm-stats strong{font-size:31px;color:#20364a;letter-spacing:-.07em;line-height:1}
+.crm-style-moderno .crm-stats small{color:#91a0ae;font-size:11px;margin-top:9px}
+.crm-style-moderno .crm-toolbar{margin-bottom:20px}
+.crm-style-moderno .crm-toolbar-search{box-shadow:0 2px 8px #142d3905;background:#fff;border:1px solid #dfe7ed;min-height:47px}
+.crm-style-moderno .crm-toolbar-search input{font-size:12px;color:#253b4d}
+.crm-style-moderno .crm-outline{background:#fff;border:1px solid #dfe6ed;color:#475f72;min-height:44px}
+.crm-style-moderno .crm-outline:hover{background:#faf6ed;border-color:#d4ac74}
+.crm-style-moderno .crm-panel{border:1px solid #e3e9ed;border-radius:14px;box-shadow:0 7px 26px #11304707;background:#fff;padding:23px}
+.crm-style-moderno .crm-panel h2{color:#263d51;letter-spacing:-.03em}
+.crm-style-moderno .crm-panel h2 button{color:#b28248}
+.crm-style-moderno .crm-table-wrap{box-shadow:0 6px 20px #14304306}
+.crm-style-moderno .crm-table thead{background:#f7f9fa}
+.crm-style-moderno .crm-table th{color:#8799a9;letter-spacing:.01em}
+.crm-style-moderno .crm-table td{color:#3f5263}
+.crm-style-moderno .crm-table tbody tr:hover{background:#f8fafb}
+.crm-style-moderno .crm-badge.member{background:#eff9f2;border-color:#ccebd6;color:#438262}
+.crm-style-moderno .crm-badge.visitor{background:#fff9eb;border-color:#f3e3b7;color:#ab8140}
+.crm-style-moderno .crm-row-actions button,.crm-style-moderno .crm-card-actions button{background:#fff;color:#52677b;border-color:#dce5eb}
+.crm-style-moderno .crm-list-avatar{background:#e5edf1;color:#4d7385;border-radius:50%}
+.crm-style-moderno .crm-empty{background:linear-gradient(#fff,#fbfcfd);border:1px dashed #d7e3e9;color:#718b9a}
+.crm-style-moderno .crm-empty strong{color:#2e4758}
+.crm-style-moderno .crm-board-column{background:#f7f9fb}
+.crm-style-moderno .crm-task-card{background:#fff;box-shadow:0 3px 10px #11304708}
+.crm-style-moderno .crm-footer{color:#9baab7}
+.crm-style-moderno .crm-dialog{background:#fff;color:#263a4d;border:1px solid #dce4eb}
+.crm-style-moderno .crm-fields input,.crm-style-moderno .crm-fields textarea,.crm-style-moderno .crm-fields select{background:#f8fafb;color:#20384b;border-color:#d5e0e7}
+.crm-style-moderno .crm-dialog-heading h2{color:#1e3449}
+.crm-style-moderno .crm-dialog-heading button{color:#576a7a}
+.crm-style-moderno .crm-menu-toggle{color:#264258}
+@media(max-width:1280px){.crm-style-moderno .crm-main{padding:30px 22px 44px}}
+@media(max-width:650px){
+ .crm-style-moderno .crm-topbar{height:63px;padding:0 14px}
+ .crm-style-moderno .crm-main{padding:24px 13px 44px}
+ .crm-style-moderno .crm-stats article{padding:14px;min-height:98px}
+ .crm-style-moderno .crm-stats article>span{width:31px;height:31px}
+ .crm-style-moderno .crm-stats strong{font-size:25px}
+ .crm-style-moderno .crm-stats small{font-size:9px}
+ .crm-style-moderno .crm-page-heading h1{font-size:30px}
+}
