@@ -1,0 +1,20 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {renderBuilder} from '../builder.js';
+import {readFileSync,existsSync} from 'node:fs';
+import path from 'node:path';
+const root=path.resolve(import.meta.dirname,'..');
+test('construtor abre demonstração sem orçamento, com cinco estilos e preview do site real',()=>{
+ const html=renderBuilder();
+ for(const id of ['moderno','tradicional','minimalista','transmissoes','futurista','personalizado'])assert.match(html,new RegExp(`value="${id}"`));
+ for(const title of ['Modelo','Personalizar','Explorar'])assert.ok(html.includes(title));
+ assert.match(html,/b-create/);
+ assert.match(html,/b-site-iframe/);
+ assert.match(html,/Sem cadastro e sem orçamento/);
+ assert.doesNotMatch(html,/b-order-form|Enviar solicitação de orçamento/);
+ const js=readFileSync(path.join(root,'public/builder-client.js'),'utf8');
+ assert.match(js,/api\/site-preview/);
+ assert.match(js,/api\/demo-sites/);
+ assert.doesNotMatch(js,/api\/orders|api\/quote/);
+ for(const model of ['moderno','tradicional','minimalista','transmissoes'])assert.ok(existsSync(path.join(root,'public/assets',`photo-${model}.webp`)));
+});

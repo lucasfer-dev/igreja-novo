@@ -1,0 +1,14 @@
+{
+  "name": "elovia-produto",
+  "version": "1.9.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --experimental-sqlite server.js",
+    "test": "node --experimental-sqlite --test tests/*.test.js",
+    "backup": "node --experimental-sqlite scripts/backup.js"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  }
+}

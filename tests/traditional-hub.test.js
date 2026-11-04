@@ -1,0 +1,26 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {renderDemoHub} from '../demo-hub.js';
+const demoId='b'.repeat(40);
+const base={name:'Igreja Batista Central',headline:'Servindo com propósito',description:'Um lugar para acolher',location:'Rio de Janeiro · RJ',color:'#b58749',logo_data:'',modules:['site','eventos','oracao']};
+test('Tradicional utiliza layout próprio e 74 recursos, preservando o hub moderno',()=>{
+ const traditional=renderDemoHub({...base,template:'tradicional'},demoId);
+ const modern=renderDemoHub({...base,template:'moderno'},demoId);
+ assert.match(traditional,/traditional-hub\.css/);
+ assert.match(traditional,/Áreas da Plataforma/);
+ assert.match(traditional,/th-app/);
+ assert.match(traditional,/Servindo a Deus/);
+ assert.match(traditional,/th-module th-module-9/);
+ assert.equal((traditional.match(/class="th-module th-module-/g)||[]).length,10);
+ assert.equal((traditional.match(/href="\/demo\/[a-f0-9]{40}\/recurso\//g)||[]).length>74,true);
+ assert.match(traditional,/id="hub-menu-toggle"/);
+ assert.match(traditional,/id="hub-calendar-grid"/);
+ assert.match(traditional,/id="hub-search-input"/);
+ assert.match(modern,/demo-hub\.css/);
+ assert.match(modern,/hub-theme-moderno/);
+ assert.doesNotMatch(modern,/traditional-hub\.css/);
+ const css=readFileSync(new URL('../public/traditional-hub.css',import.meta.url),'utf8');
+ assert.match(css,/@media\(max-width:580px\)/);
+ assert.match(css,/--church-color/);
+});
