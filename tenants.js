@@ -48,7 +48,7 @@ export function makeTenantRoutes(db){init(db);initCRM(db);
     const user=requireUser(req);
     if(!permitted(user.church_id,'membros'))throw error(403,'O módulo de gestão de membros não está habilitado');
     syncLegacyMembers(db,user.church_id);syncLegacyEvents(db,user.church_id);
-    const church=db.prepare('SELECT name,template,color,location,logo_data FROM churches WHERE id=?').get(user.church_id);
+    const church=db.prepare('SELECT slug,name,template,color,location,logo_data FROM churches WHERE id=?').get(user.church_id);
     render(res,renderCRM(church,{live:true}));return true;
   }
   if(pathname==='/api/church/crm/export/people'){
