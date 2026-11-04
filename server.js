@@ -40,6 +40,9 @@ db.exec(`CREATE TABLE IF NOT EXISTS demo_sites (
 )`);
 initCRM(db);
 initVisitorIntake(db);
+
+db.exec("CREATE TABLE IF NOT EXISTS demo_prayers(id TEXT PRIMARY KEY,demo_id TEXT NOT NULL,requester TEXT NOT NULL,message TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'pendente',created_at TEXT NOT NULL,FOREIGN KEY(demo_id) REFERENCES demo_sites(id) ON DELETE CASCADE); CREATE TABLE IF NOT EXISTS demo_schedules(id TEXT PRIMARY KEY,demo_id TEXT NOT NULL,ministry TEXT NOT NULL,person TEXT NOT NULL,starts_at TEXT NOT NULL,notes TEXT NOT NULL,created_at TEXT NOT NULL,FOREIGN KEY(demo_id) REFERENCES demo_sites(id) ON DELETE CASCADE); CREATE INDEX IF NOT EXISTS demo_prayer_scope ON demo_prayers(demo_id); CREATE INDEX IF NOT EXISTS demo_schedule_scope ON demo_schedules(demo_id);");
+
 // Migrations are additive: old customer records are retained.
 for(const [table,column,sql] of [
  ['orders','headline',"TEXT NOT NULL DEFAULT ''"],['orders','site_description',"TEXT NOT NULL DEFAULT ''"],['orders','location',"TEXT NOT NULL DEFAULT ''"],['orders','logo_data',"TEXT NOT NULL DEFAULT ''"],
@@ -153,6 +156,49 @@ export async function handler(req,res){try{
   if(origin){let host;try{host=new URL(origin).host;}catch{throw err(403,'Origem inválida');}if(host!==req.headers.host)throw err(403,'Origem não autorizada');}
   return json(res,201,registerPublicVisitor(db,scope,await body(req)));
  }
+
+ // Operational demo-only prayer and service schedules share the same church URL token.
+ const demoExtra=/^\/api\/demo\/([0-9a-f]{40})\/(prayers|schedules)(?:\/([a-f0-9]{32}))?$/.exec(p);
+ if(demoExtra){
+  const [all,demoId,kind,itemId]=demoExtra;
+  if(!db.prepare('SELECT 1 FROM demo_sites WHERE id=?').get(demoId))throw err(404,'Igreja de demonstração não encontrada');
+  const table=kind==='prayers'?'demo_prayers':'demo_schedules';
+  const cols=kind==='prayers'?['requester','message','status']:['ministry','person','starts_at','notes'];
+  if(m==='GET'&&!itemId)return json(res,200,{items:db.prepare('SELECT * FROM '+table+' WHERE demo_id=? ORDER BY created_at DESC LIMIT 300').all(demoId)});
+  if(!['POST','PATCH','DELETE'].includes(m))throw err(405,'Método não permitido');
+  const origin=req.headers.origin;if(origin){let host;try{host=new URL(origin).host;}catch{throw err(403,'Origem inválida');}if(host!==req.headers.host)throw err(403,'Origem não autorizada');}
+  if(m==='DELETE'&&itemId){
+   const result=db.prepare('DELETE FROM '+table+' WHERE id=? AND demo_id=?').run(itemId,demoId);
+   if(!result.changes)throw err(404,'Registro não encontrado');return json(res,200,{ok:true});
+  }
+  if((m==='PATCH'&&!itemId)||(m==='POST'&&itemId))throw err(405,'Método não permitido');
+  const b=await body(req);
+  for(const column of cols){
+   const min=column==='message'?5:column==='requester'||column==='ministry'||column==='person'?1:0;
+   const max=column==='message'?2000:column==='notes'?1000:column==='starts_at'?35:200;
+   if(!validText(b[column]??'',min,max))throw err(400,'Campo '+column+' inválido');
+  }
+  if(kind==='prayers'&&!['pendente','em_oracao','concluido'].includes(b.status))throw err(400,'Status inválido');
+  const values=cols.map(column=>b[column].trim());
+  if(m==='POST'){
+   const id=randomBytes(16).toString('hex');
+   db.prepare('INSERT INTO '+table+'(id,demo_id,'+cols.join(',')+',created_at) VALUES('+Array(cols.length+3).fill('?').join(',')+')').run(id,demoId,...values,now());
+   return json(res,201,{id});
+  }
+  const result=db.prepare('UPDATE '+table+' SET '+cols.map(column=>column+'=?').join(',')+' WHERE id=? AND demo_id=?').run(...values,itemId,demoId);
+  if(!result.changes)throw err(404,'Registro não encontrado');return json(res,200,{ok:true});
+ }
+ if(m==='POST'&&/^\/api\/demo\/[0-9a-f]{40}\/prayer-intake$/.test(p)){
+  const demoId=p.split('/')[3];
+  if(!db.prepare('SELECT 1 FROM demo_sites WHERE id=?').get(demoId))throw err(404,'Demonstração não encontrada');
+  const origin=req.headers.origin;if(origin){let host;try{host=new URL(origin).host;}catch{throw err(403,'Origem inválida');}if(host!==req.headers.host)throw err(403,'Origem não autorizada');}
+  checkPublicIntakeRate(req.socket.remoteAddress,{type:'demo',id:demoId});
+  const b=await body(req);
+  if(!validText(b.requester,2,100)||!validText(b.message,5,2000))throw err(400,'Preencha seu nome e o pedido');
+  db.prepare("INSERT INTO demo_prayers(id,demo_id,requester,message,status,created_at) VALUES(?,?,?,?,'pendente',?)").run(randomBytes(16).toString('hex'),demoId,b.requester.trim(),b.message.trim(),now());
+  return json(res,201,{ok:true});
+ }
+
  const demoCRM=/^\/demo\/([0-9a-f]{40})\/crm$/.exec(p);
  if(m==='GET'&&demoCRM){
   const record=db.prepare('SELECT payload FROM demo_sites WHERE id=?').get(demoCRM[1]);
