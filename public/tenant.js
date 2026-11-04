@@ -8,7 +8,7 @@ let info=null,active='overview';
 async function req(url,method='GET',data){const r=await fetch(url,{method,headers:{...(data?{'Content-Type':'application/json'}:{}),...(info?{'x-csrf-token':info.csrf}:{})},body:data?JSON.stringify(data):undefined});let j;try{j=await r.json();}catch{throw Error('O servidor não retornou uma resposta válida.');}if(!r.ok)throw Error(j.error||'Não foi possível concluir a operação.');return j;}
 function say(msg,kind='success'){const el=$('#workspace-alert');if(el){el.textContent=msg;el.className='workspace-alert '+kind;el.hidden=false;}else {const f=$('#church-feedback');if(f)f.textContent=msg;}}
 const fmtDate=s=>{if(!s)return 'A definir';const d=new Date(s.includes('T')?s:s.replace(' ','T'));return Number.isNaN(d.getTime())?s:d.toLocaleString('pt-BR',{dateStyle:'medium',timeStyle:'short'});};
-$('#church-login')?.addEventListener('submit',async e=>{e.preventDefault();const b=Object.fromEntries(new FormData(e.currentTarget));try{await req('/api/church/login','POST',b);location.href='/igreja/painel';}catch(ex){$('#church-feedback').textContent=ex.message;}});
+$('#church-login')?.addEventListener('submit',async e=>{e.preventDefault();const b=Object.fromEntries(new FormData(e.currentTarget));try{await req('/api/church/login','POST',b);const session=await req('/api/church/me');location.href=session.modules.includes('membros')?'/igreja/crm':'/igreja/painel';}catch(ex){$('#church-feedback').textContent=ex.message;}});
 $('#public-visitor')?.addEventListener('submit',async e=>{
  e.preventDefault();
  const form=e.currentTarget,feedback=$('#visitor-feedback'),submit=form.querySelector('[type="submit"]');
